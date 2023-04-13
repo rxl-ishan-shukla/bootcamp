@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Simple calculator</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font: bold 14px Arial, sans-serif;
+      }
+      html {
+        height: 100%;
+        background: white;
+        background-size: cover;
+      }
+      #calculator {
+        width: 325px;
+        height: auto;
+        margin: 100px auto;
+        padding: 20px 20px 9px;
+        background: blueviolet;
+        border-radius: 3px;
+      }
+      .top span.clear {
+        float: left;
+      }
+      .top .screen {
+        height: 40px;
+        width: 212px;
+        float: right;
+        padding: 0 10px;
+        background: yellowgreen;
+        border-radius: 3px;
+        font-size: 17px;
+        line-height: 40px;
+        color: white;
+        text-align: right;
+        letter-spacing: 1px;
+      }
+      .keys,
+      .top {
+        overflow: hidden;
+      }
+      .keys span,
+      .top span.clear {
+        float: left;
+        position: relative;
+        top: 0;
+        cursor: pointer;
+        width: 66px;
+        height: 36px;
+        background: white;
+        border-radius: 3px;
+        margin: 0 7px 11px 0;
+        color: #888;
+        line-height: 36px;
+        text-align: center;
+        user-select: none;
+      }
+      .keys span.operator {
+        background: pink;
+        color: black;
+        margin-right: 0;
+      }
+      .keys span.eval {
+        background: lightseagreen;
+        color: black;
+      }
+      .top span.clear {
+        background: pink;
+        color: black;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="calculator">
+      <div class="top">
+        <span class="clear">C</span>
+        <div class="screen"></div>
+      </div>
+      <div class="keys">
+        <span>7</span>
+        <span>8</span>
+        <span>9</span>
+        <span class="operator">+</span>
+        <span>4</span>
+        <span>5</span>
+        <span>6</span>
+        <span class="operator">-</span>
+        <span>1</span>
+        <span>2</span>
+        <span>3</span>
+        <span class="operator">÷</span>
+        <span>0</span>
+        <span>.</span>
+        <span class="eval">=</span>
+        <span class="operator">x</span>
+      </div>
+    </div>
+    <script>
+      const keys = document.querySelectorAll("#calculator span");
+      const operators = ["+", "-", "x", "÷"];
+      let decimalAdded = false;
+
+      const clear = (input) => {
+        input.innerHTML = "";
+        decimalAdded = false;
+      };
+
+      const solve = (input) => {
+        let equation = input.innerHTML;
+        const lastChar = equation[equation.length - 1];
+        equation = equation.replace(/x/g, "*").replace(/÷/g, "/");
+        if (operators.indexOf(lastChar) > -1 || lastChar == ".")
+          equation = equation.replace(/.$/, "");
+        if (equation) {
+          const solution = eval(equation);
+          input.innerHTML =
+            solution == Infinity
+              ? "ERROR"
+              : solution == -Infinity
+              ? "ERROR"
+              : solution;
+        }
+        decimalAdded = false;
+      };
+
+      const handleOperator = (input, btnVal) => {
+        const inputVal = input.innerHTML;
+        const lastChar = inputVal[inputVal.length - 1];
+        if (inputVal != "" && operators.indexOf(lastChar) == -1) {
+          if (lastChar == ".") {
+            input.innerHTML = inputVal.slice(0, -1);
+          }
+          input.innerHTML += btnVal;
+        } else if (inputVal == "" && btnVal == "-") input.innerHTML += btnVal;
+        if (operators.indexOf(lastChar) > -1 && inputVal.length > 1) {
+          input.innerHTML = inputVal.replace(/.$/, btnVal);
+        }
+        decimalAdded = false;
+      };
+
+      const handleDot = (input) => {
+        if (!decimalAdded) {
+          input.innerHTML += ".";
+          decimalAdded = true;
+        }
+      };
+
+      for (let i = 0; i < keys.length; i++) {
+        keys[i].onclick = function (e) {
+          const input = document.querySelector(".screen");
+          const inputVal = input.innerHTML;
+          const btnVal = this.innerHTML;
+          if (inputVal == "ERROR") {
+            clear(input);
+          }
+          switch (btnVal) {
+            case "C":
+              clear(input);
+              break;
+            case "=":
+              solve(input);
+              break;
+            case "+":
+              handleOperator(input, btnVal);
+              break;
+            case "-":
+              handleOperator(input, btnVal);
+              break;
+            case "÷":
+              handleOperator(input, btnVal);
+              break;
+            case "x":
+              handleOperator(input, btnVal);
+              break;
+            case ".":
+              handleDot(input);
+              break;
+            default:
+              input.innerHTML += btnVal;
+              break;
+          }
+          e.preventDefault();
+        };
+      }
+    </script>
+  </body>
+</html>
