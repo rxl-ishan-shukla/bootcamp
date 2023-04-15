@@ -1,3 +1,3 @@
 # BOOTCAMP
 
-It's branches contain various tutorials for git and some tips and tricks.
+Tips and Tricks for deleting branch locally and in remote location.
