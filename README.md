@@ -1,3 +1,3 @@
 # BOOTCAMP
 
-It's branches contain various tutorials for git and some tips and tricks.
+This tutorial shows tips and tricks for renaming branch locally and in remote as well.
