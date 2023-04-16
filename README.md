@@ -1,3 +1,3 @@
 # BOOTCAMP
 
-It's branches contain various tutorials
+This branch contains important basic topics of JS
