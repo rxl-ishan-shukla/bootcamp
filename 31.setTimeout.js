@@ -10,14 +10,11 @@
 
 console.log("Start");
 
-setTimeout(() => {
-    console.log("Callback")
-}, 5000)
+// 0 can be omitted in setTimeout()
+setTimeout(() => console.log("Callback"));
 
 let startDate = new Date().getTime();
 
-while(new Date().getTime() <= startDate+10000){
-
-}
+while (new Date().getTime() <= startDate + 5000) {}
 
 console.log("End");
