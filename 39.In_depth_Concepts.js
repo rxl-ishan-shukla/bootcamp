@@ -269,8 +269,79 @@
     
     Non-enumerable: Normally, a built0in toString for objects is non-enumerable, it does 
                     not show up in for...in. But if we add a toString of our own, then by
-                    default it shows up in for...in.
+                    default it shows up in for...in. When we don't want such behaviour,
+                    then we can set enumerable: false. Then it won't appear in a for...in 
+                    loop, just like the built-in one. Non-enumerable properties are also
+                    excluded from Objects.keys
+
+    Non-configurable: A non-configurable property prevents changes of property flags and 
+                      its deletion, while allowing to change its value. However, there is
+                      an exception about changing flags. We can change writable: true to 
+                      fale for a non-configurable property, thus preventing its value 
+                      modification to add another layer of protection but not the other 
+                      way around though.
     
+    If we want to define many properties at once then we can use "Object.defineProperties"
+    The syntax is:
+        Object.defineProperties(obj, {
+            property1: descriptor1,
+            property2: descriptor2,
+        });
+    
+    If we want to get all property descriptors at once, we can use "Object.getOwnPropertyDescriptors"
+    Together with Object.defineProperties it can be used as a "flags-aware" way of cloning
+    an object:
+        const cloneObj = Object.defineProperties({}, Object.getOwnPropertyDescriptors(obj));
+    Normally when we clone an object, we use an assignment to copy properties, like this:
+        for(const key in user){
+            clone[key] = user[key]
+        }
+    The above code does not copy flags. So if we want a better clone then Object.defineProperties is 
+    preferred. Another difference is that for...in ignores symbolic and non-enumerable properties, but
+    Object.getOwnPropertyDescriptors returns all property descriptors including symbolic and 
+    non-enumerable ones.
+
+22. Sealing an object globally
+    Property descriptors work at the level of individual properties. There are also methods that limit
+    access to the whole object:
+        Object.preventExtensions(obj)
+            Forbids the addition of new properties to the object
+        Object.seal(obj)
+            Forbids adding/removing of properties. Sets "configurable : false" for all existing properties
+        Object.freeze(obj)
+            Forbids adding/removing/changing of properties. Sets "configurable: false, writable: false"
+            for all existing properties.
+        Object.isExtensible(obj)
+            Returns false if adding properties is forbidden, otherwise true.
+        Object.isSealed(obj)
+            Returns true if adding/removing properties is forbidden, and all existing properties have
+            "configurable: false"
+        Object.isFrozen(obj)
+            Returns true if adding/removing/changing properties is forbidden, and all current properties
+            are "configurable: false, writable: flase"
+
+23. getters and setters
+    There are 2 kinds of object properties. The first kind is data properties. We already know how to 
+    work with them. All properties that we've been using until now were data properties.
+    The second type of property is something new. It's an accessor property. They are essentially
+    functions that execute on getting and setting value, but look like regular properties to an external
+    code. Accessor properties are represented by "getter" and "setter" methods. In an object literal they 
+    are denoted by "get" and "set"
+
+    Accessor descriptors: They are differnet form those for data properties.
+    For accessor properties, there is no value or writable, but instead there are get and set functions.
+    That is an accessor descriptor may have:
+        get: a function without arguments, that works when a property is read
+        set: a function with one argument, that is called when the property is set
+        enumerable: same as for data properties
+        configurable: same as for data properties
+    Note: a property can be either an accessor (has get/set methods) or a data property (has a value)
+          but not both at once. And if we try it will give an error.
+    
+24. Smarter getters/setter
+    Getters/Setters can be used as wrappers over "real" property values to gain more control over operations
+    with them. We can provide conditions while creating getters/setters so that until that condition is fullfiled
+    it will either give an error or handle it differently thus acting as a safety mechanism.
     
 
 
@@ -396,4 +467,3 @@ obj18_2.test = obj18_3;
 obj18_3.test = obj18_2;
 
 console.log(JSON.stringify(obj18_3)); // TypeError: Converting circular structure to JSON
-
