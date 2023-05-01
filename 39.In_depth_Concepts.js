@@ -237,7 +237,17 @@
         Can't be called with "new"
         They also don't have "super"
     
-21. Object properties, besides a "value" have 3 special attributes (so-called "flags"):
+21. All functions remember the lexical Environment in which they were created. Technically
+    there's no magic here: all functions have the hidden property named [[Environment]],
+    that keeps the reference to the Lexical Environment where the functions was created.
+    Usually, a Lexical Environment is removed from memory with all the variables after the 
+    function call finishes. That’s because there are no references to it. As any JavaScript
+    object, it’s only kept in memory while it’s reachable. However, if there’s a nested 
+    function that is still reachable after the end of a function, then it has [[Environment]] 
+    property that references the lexical environment.In that case the Lexical Environment 
+    is still reachable even after the completion of the function, so it stays alive.
+    
+22. Object properties, besides a "value" have 3 special attributes (so-called "flags"):
         writable- if true, the value can be changed, otherwise it's read-only
         enumerable- if true, then listed in loops, otherwise not listed
         configurable- if true, the property can be deleted and these attributes
@@ -301,7 +311,7 @@
     Object.getOwnPropertyDescriptors returns all property descriptors including symbolic and 
     non-enumerable ones.
 
-22. Sealing an object globally
+23. Sealing an object globally
     Property descriptors work at the level of individual properties. There are also methods that limit
     access to the whole object:
         Object.preventExtensions(obj)
@@ -320,7 +330,7 @@
             Returns true if adding/removing/changing properties is forbidden, and all current properties
             are "configurable: false, writable: flase"
 
-23. getters and setters
+24. getters and setters
     There are 2 kinds of object properties. The first kind is data properties. We already know how to 
     work with them. All properties that we've been using until now were data properties.
     The second type of property is something new. It's an accessor property. They are essentially
@@ -338,11 +348,13 @@
     Note: a property can be either an accessor (has get/set methods) or a data property (has a value)
           but not both at once. And if we try it will give an error.
     
-24. Smarter getters/setter
+25. Smarter getters/setter
     Getters/Setters can be used as wrappers over "real" property values to gain more control over operations
     with them. We can provide conditions while creating getters/setters so that until that condition is fullfiled
     it will either give an error or handle it differently thus acting as a safety mechanism.
-    
+
+26. Prototypal Inheritance
+    [[Prototype]]: In JS, objects have a special hidden property [[Prototype]]
 
 
 */
@@ -467,3 +479,21 @@ obj18_2.test = obj18_3;
 obj18_3.test = obj18_2;
 
 console.log(JSON.stringify(obj18_3)); // TypeError: Converting circular structure to JSON
+
+// 21. Example 1
+const func21_1 = (a) => {
+  const cache = {};
+  return (a) => {
+    if (cache[a]) {
+      return cache[a];
+    }
+    cache[a] = a;
+    console.log(a);
+    return a;
+  };
+};
+const func21_2 = func21_1();
+func21_2(1);
+func21_2(2);
+func21_2(1);
+func21_2(2);
