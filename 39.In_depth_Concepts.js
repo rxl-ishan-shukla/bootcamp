@@ -354,146 +354,304 @@
     it will either give an error or handle it differently thus acting as a safety mechanism.
 
 26. Prototypal Inheritance
-    [[Prototype]]: In JS, objects have a special hidden property [[Prototype]]
+    [[Prototype]]: In JS, objects have a special hidden property [[Prototype]], that is either null or references
+    another object. That object is called a prototype.
+    When we try to read a property from object and it's missing JS automatically takes it from the prototype. In 
+    programming this is called prototypal inheritance.
+    The property [[Prototype]] is internal and hidden, but there are many ways to set it. One of them is to use
+    the special name __proto__
+    There are only 2 limitations:
+    1. The references can't go in circles. JS will throw an error if we try to assign __proto__ in a circle.
+    2. The value of __proto__ can be either an object or null. Other types are ignored.
+    Also an object can have only one [[Prototype]]. An object may not inherit from 2 others.
+
+    Note: __proto__ is not the same as the internal [[Prototype]] property. It's a getter/setter for [[Prototype]].
+          The __proto__ property is a bit outdated. It exists for historical reasons, modern JS suggests that we 
+          should use Object.getProtypeOf/Object.setPrototypeOf functions instead that get/set the prototype.
+    
+    Writing dosen't use prototype
+    The prototype is only used for reading properties. Write/delete operations work directly with the object. 
+    Note: Accessor properties are an exception, as assignment is handled by a setter function. So writing to
+          such a property is actually the same as calling a function
+    
+    Behaviour of "this" is not affected by prototypes at all. No matter where the method is found: in an object
+    or its prototype. In a method call, "this" is always the object befoe the dot. This is an important thing to
+    know, because we may have a big object with many methods, and have objects that inherit form it. And when the 
+    inheriting methods, they will modify only their own states, not the stated of the big object. 
+
+    Note: for...in loop iterates over inherited properties too. If we want to restrict this behaviour we can use
+          a built-in method "obj.hasOwnProperty(key)" : it returns true if obj has its own property named key and 
+          is not inherited.
+    Note: A literal object by default inherits from Object.prototype. 
+
+
+
 
 
 */
 
 // 1. Example 1
-console.log("Hello");
-[1, 2].forEach(console.log);
+{
+  console.log("Hello");
+  [1, 2].forEach(console.log);
 
-// BUT if we remove a semicolon
-console.log("Hello"); // Remove ; to see error
-[(1, 2)].forEach(console.log);
-// This will get an error because JS does not
-// assume a semicolon before square brackets.
-// So, the code in the last example is treated
-// as a single statement.
-// JS will see it like this
-// console.log("Hello")[1,2].forEach(console.log);
+  // BUT if we remove a semicolon
+  console.log("Hello"); // Remove ; to see error
+  [(1, 2)].forEach(console.log);
+  // This will get an error because JS does not
+  // assume a semicolon before square brackets.
+  // So, the code in the last example is treated
+  // as a single statement.
+  // JS will see it like this
+  // console.log("Hello")[1,2].forEach(console.log);
+}
 
 // 11. Example 1
-const obj11 = { test: undefined };
-console.log(obj11.test);
-console.log("test" in obj11);
+{
+  const obj11 = { test: undefined };
+  console.log(obj11.test);
+  console.log("test" in obj11);
+}
 
 // 12. Example 1
-const obj12_1 = {
-  1: "A",
-  3: "A",
-  2: "A",
-  5: "A",
-  4: "A",
-  Name: "Ishan",
-  Age: 21,
-  Gender: "Male",
-};
+{
+  const obj12_1 = {
+    1: "A",
+    3: "A",
+    2: "A",
+    5: "A",
+    4: "A",
+    Name: "Ishan",
+    Age: 21,
+    Gender: "Male",
+  };
 
-const obj12_2 = {
-  "+1": "A",
-  "+3": "A",
-  "+2": "A",
-  "+5": "A",
-  "+4": "A",
-  Name: "Ishan",
-  Age: 21,
-  Gender: "Male",
-};
+  const obj12_2 = {
+    "+1": "A",
+    "+3": "A",
+    "+2": "A",
+    "+5": "A",
+    "+4": "A",
+    Name: "Ishan",
+    Age: 21,
+    Gender: "Male",
+  };
 
-console.log(obj12_1);
-console.log(obj12_2);
+  console.log(obj12_1);
+  console.log(obj12_2);
+}
 
 // 13. Example 1
-const var13_1 = Symbol("sym");
-const var13_2 = Symbol("sym");
-console.log(var13_1 === var13_2);
-console.log(var13_1.description === var13_2.description);
+{
+  const var13_1 = Symbol("sym");
+  const var13_2 = Symbol("sym");
+  console.log(var13_1 === var13_2);
+  console.log(var13_1.description === var13_2.description);
+}
 
 // 14. Example 1
-const obj14_1 = {
-  name: "A",
-};
+{
+  const obj14_1 = {
+    name: "A",
+  };
 
-// ... Inside Script 1
-obj14_1.id = 10;
+  // ... Inside Script 1
+  obj14_1.id = 10;
 
-// ... Inside Script 2
-obj14_1.id = 20; // OOH NO 'id' will be overwritten here
+  // ... Inside Script 2
+  obj14_1.id = 20; // OOH NO 'id' will be overwritten here
+}
 
 // 14. Example 2
-const sy12_1 = Symbol("id");
-const sy12_2 = Symbol("id");
+{
+  const sy12_1 = Symbol("id");
+  const sy12_2 = Symbol("id");
 
-const obj14_2 = {
-  name: "B",
-  [sy12_1]: 10,
-};
+  const obj14_2 = {
+    name: "B",
+    [sy12_1]: 10,
+  };
 
-obj14_2[sy12_2] = 20;
+  obj14_2[sy12_2] = 20;
 
-console.log(obj14_2);
+  console.log(obj14_2);
+}
 
 // 15. Example 1
-const id15_1 = Symbol("id");
-const obj15_1 = {
-  name: "John",
-  age: 30,
-  [id15_1]: 123,
-};
+{
+  const id15_1 = Symbol("id");
+  const obj15_1 = {
+    name: "John",
+    age: 30,
+    [id15_1]: 123,
+  };
 
-for (let key in obj15_1) console.log(key); // name, age (no symbols)
+  for (let key in obj15_1) console.log(key); // name, age (no symbols)
 
-// the direct access by the symbol works
-console.log("Direct: " + obj15_1[id15_1]); // Direct: 123
+  // the direct access by the symbol works
+  console.log("Direct: " + obj15_1[id15_1]); // Direct: 123
+}
 
 // 16. Example 1
-const id16_1 = Symbol.for("id");
+{
+  const id16_1 = Symbol.for("id");
 
-const id16_2 = Symbol.for("id");
+  const id16_2 = Symbol.for("id");
 
-console.log(id16_1 === id16_2);
+  console.log(id16_1 === id16_2);
 
-const ghs = {
-  cache: 1,
-};
+  const ghs = {
+    cache: 1,
+  };
 
-console.log(ghs);
+  console.log(ghs);
+}
 
 // 18. Example 1
-const obj18_1 = {
-  sayHi() {
-    // ignored
-    console.log("Hello");
-  },
-  [Symbol("id")]: 123, // ignored
-  something: undefined, // ignored
-};
+{
+  const obj18_1 = {
+    sayHi() {
+      // ignored
+      console.log("Hello");
+    },
+    [Symbol("id")]: 123, // ignored
+    something: undefined, // ignored
+  };
 
-console.log(JSON.stringify(obj18_1)); // {} (empty object)
+  console.log(JSON.stringify(obj18_1)); // {} (empty object)
+}
 
 // 18. Example 2
-const obj18_2 = {};
-const obj18_3 = {};
-obj18_2.test = obj18_3;
-obj18_3.test = obj18_2;
+{
+  const obj18_2 = {};
+  const obj18_3 = {};
+  obj18_2.test = obj18_3;
+  obj18_3.test = obj18_2;
 
-console.log(JSON.stringify(obj18_3)); // TypeError: Converting circular structure to JSON
+  console.log(JSON.stringify(obj18_3)); // TypeError: Converting circular structure to JSON
+}
 
 // 21. Example 1
-const func21_1 = (a) => {
-  const cache = {};
-  return (a) => {
-    if (cache[a]) {
-      return cache[a];
-    }
-    cache[a] = a;
-    console.log(a);
-    return a;
+{
+  const func21_1 = (a) => {
+    const cache = {};
+    return (a) => {
+      if (cache[a]) {
+        return cache[a];
+      }
+      cache[a] = a;
+      console.log(a);
+      return a;
+    };
   };
-};
-const func21_2 = func21_1();
-func21_2(1);
-func21_2(2);
-func21_2(1);
-func21_2(2);
+  const func21_2 = func21_1();
+  func21_2(1);
+  func21_2(2);
+  func21_2(1);
+  func21_2(2);
+}
+
+// 26. Example 1
+{
+  const obj26_1 = {
+    eats: true,
+  };
+  const obj26_2 = {
+    jumps: true,
+  };
+  obj26_2.__proto__ = obj26_1;
+  console.log(obj26_2.jumps);
+  console.log(obj26_2.eats);
+}
+
+// 26. Example 2
+{
+  const animal = {
+    eats: true,
+    walk() {
+      console.log("Animal Walks");
+    },
+  };
+  const rabit = {
+    __proto__: animal,
+  };
+  rabit.walk = function () {
+    console.log("Rabit Walks");
+  };
+  rabit.walk();
+}
+
+// 26. Example 3
+{
+  const user = {
+    name: "Ishan",
+    surname: "Shukla",
+    set fullname(value) {
+      [this.name, this.surname] = value.split(" ");
+    },
+    get fullname() {
+      return `${this.name} ${this.surname}`;
+    },
+  };
+
+  const admin = {
+    __proto__: user,
+    isAdmin: true,
+  };
+
+  console.log(user.fullname);
+  console.log(admin.fullname);
+
+  admin.fullname = "Sunil Shukla";
+
+  console.log(user.fullname);
+  console.log(admin.fullname);
+
+  user.fullname = "Ishmit Shukla";
+
+  console.log(user.fullname);
+  console.log(admin.fullname);
+}
+
+// 26. Example 4
+{
+  const animal = {
+    sleep() {
+      this.isSleeping = true;
+    },
+  };
+  const rabbit = {
+    __proto__: animal,
+  };
+  rabbit.sleep();
+  console.log(rabbit.isSleeping);
+  console.log(animal.isSleeping);
+}
+
+// 26. Example 5
+{
+  const animal = {
+    eats: true,
+  };
+  const rabbit = {
+    jumps: true,
+    __proto__: animal,
+  };
+  for (const prop in rabbit) {
+    const isOwn = rabbit.hasOwnProperty(prop);
+    if (isOwn) {
+      console.log("own", prop);
+    } else {
+      console.log("inherited", prop);
+    }
+  }
+
+  // Pay attention here. Where is the method rabbit.hasOwnProperty coming from?
+  // We did not define it.
+  // Here we hace the following inheritance chain:
+  // rabbit -> animal -> Object.prototype
+  // Looking at the chain we can see that the method is provided by Object.prototype.hasOwnProperty
+  // In other words it is inherited. Then why it did not appear in the for...in loop.
+  // The answer is simple it's not enumerable. Just like all other properties of Object.prototype,
+  // it has enumerable: false flag. And for...in only lists enumerable properties.
+}
