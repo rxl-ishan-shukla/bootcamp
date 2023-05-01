@@ -384,7 +384,24 @@
           is not inherited.
     Note: A literal object by default inherits from Object.prototype. 
 
+27. When "new Object()" is called or a literal object {...} is created, the [[Prototype]] of it is set to
+    Object.prototype
 
+28. Primitives and Prototypes
+    As we know, primitives are not objects. But if we try to access their properties, temporary wrapper objects are
+    created using built-in constructors String, Number, Boolean. They provide the methods and disappear. These objects
+    are created invisibly to us. Methods of these objects also reside in prototypes, available as String.prototype,
+    Number.prototype and Boolean.prototype 
+    Values null and undefined have no object wrappers and there are no corresponding prototypes either.
+
+29. Changing native prototypes
+    Native prototypes can be modified. For instance, if we add a method to String.prototype, it becomes available
+    to all strings.
+    Note: During the process of development, we may have ideas for new built-in methods we'd like to have, and we may
+    be tempted to add them to native prototypes. But that is generally a bad idea. Because if two libraries add a 
+    method with same name, then one of them will be overwriting the method of the other. So generally, modifying a
+    native prototype is considered a bad idea. In modern programming, there is only one case where modifying native 
+    prototypes is approved. That's polyfilling.
 
 
 
@@ -654,4 +671,17 @@
   // In other words it is inherited. Then why it did not appear in the for...in loop.
   // The answer is simple it's not enumerable. Just like all other properties of Object.prototype,
   // it has enumerable: false flag. And for...in only lists enumerable properties.
+}
+
+// 27. Example 1
+{
+  const obj = {};
+  const arr = [];
+  console.log(obj.__proto__ === Object.prototype);
+  console.log(obj.toString === obj.__proto__.toString);
+  console.log(obj.toString === Object.prototype.toString);
+  console.log(Object.prototype.__proto__);
+  console.log(arr.__proto__ === Array.prototype);
+  console.log(arr.__proto__.__proto__ === Object.prototype);
+  console.log(arr.__proto__.__proto__.__proto__);
 }
