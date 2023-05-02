@@ -310,6 +310,9 @@
     preferred. Another difference is that for...in ignores symbolic and non-enumerable properties, but
     Object.getOwnPropertyDescriptors returns all property descriptors including symbolic and 
     non-enumerable ones.
+    Note: We can use Object.create to perform an objecgt cloning more powerful than copying properties
+          in for...in :
+          const clonePowerfull = Object.create(Object.getPrototypeOf(obj), Object.getOwnPropertyDescriptors(obj))
 
 23. Sealing an object globally
     Property descriptors work at the level of individual properties. There are also methods that limit
@@ -402,286 +405,642 @@
     method with same name, then one of them will be overwriting the method of the other. So generally, modifying a
     native prototype is considered a bad idea. In modern programming, there is only one case where modifying native 
     prototypes is approved. That's polyfilling.
+    
+30. The modern methods to get/set a prototype are:
+        Object.getPrototypeOf(obj): returns the [[Prototype]] of obj
+        Object.setPrototypeOf(obj, proto): sets the [[Prototype]] of obj to proto
+    The only usage of __proto__ is as a property when creating a new object. Although, there's a special method for 
+    this too:
+        Object.create(proto, [descriptors]): creates an empty object with given proto as [[Prototype]] and optional
+                                             property descriptors
+
+31. Don't change [[Prototype]] on existing objects if speed matters. Technically, we can get/set [[Prototypes]] at
+    any time. But usually we only set it once at the object creation time and don't modify it anymore. And JS
+    engines are highly optimized for this. Changing a prototype "on-the-fly" with Object.setPrototypeOf or 
+    obj.__proto__= is a very slow operation as it breaks internal optimizations for object property access
+    operations. So avoid it unless you know what you're doing, or JS speed totally doesn't concerns you.
+
+32. Classes in JS
+    In JS, a class is a kind of function. For seeing what a class do let's take an example:
+        class User{
+            constructor(name){ this.name = name; }
+            sayHi() {console.log(this.name);}
+        }
+        What class User {...} construct really does is:
+            1. Creates a function named User, that becomes the result of the class declaration. The function code
+               is taken form the constructor method (assumed empty if we don't write such method).
+            2. Stores class methods, such as sayHi, in User.prototype
+        After new User object is created, when we call its method, its taken from the prototype.
+    
+    Important differences of class
+    1. First, a function created by class is labelled by a special internal property [[IsClassConstructor]]: true
+       So, its not entirely the same as creating it manually. The language checks for that property in a variety
+       of places. For example, unlike a regular function, it must be called with new.
+    2. Class methods are non-enumerable. Aclass definition sets enumerable flag to false for all 
+       methods in the prototype. That's good, because if we for...in over an object, we usually
+       don't want its class methods.
+    3. Classes always use strict. All code inside class construct is automatically in strict mode
+
+    Class expression: Just like functions, classes can be defined inside another expression, passed
+                      around, returned, assigned, etc.
+
+    Getters/setters: Just like literal objects, classes may include getters/setters, computed properties etc.
+                     Technically, such class declaration works by creating getters and setters in User.prototype.
+    
+    Computed names: Just like literal objects, we can write method name using brackets [...]
+
+    Class Fields: It is a syntax that allows to add any properties. For instance let's add name
+                  property to class User:
+                    See Example 3
+                  The important difference of class fields is that they are set on individual objects,
+                  not User.prototype:
+                    See Example 4
+    The Basic class syntax looks like:
+        class MyClass {
+            prop = value; // class fields stored in MyClass
+            constructor(...){
+                this.name=something // stored in MyClass.prototype
+            }
+            method(...) {} // method
+            get something(...) {} // getter method
+            set something(...) {} // setter method
+            [Symbol.iterator]() {} // method with computed name (symbol here)
+        }
+
+33. Class Inheritance
+    It is a way for one class to extend another class. So we can create new functionality on top of the existing.
+      See Example 1
+    The "extends" keyword: Internally, extends keyword works using the good old prototype mechanics.
+    It sets Rabbit.prototypr.[[Prototype]] to Animal.prototype So, if a method is not found in
+    Rabbit.prototype, JS takes it from Animal.prototype
+
+    For instance, how JS engine will find rabbit.run method:
+        1. The rabbit object (has no run)
+        2. It's prototype, that is Rabbit.prototype (has hide, but bot run)
+        3. It's prototype, that is (due to extends) Animal.prototype, that 
+           finally has the run method.
+
+    Any expression is allowed after "extends"
+    Class syntax allows to specify not just a class, but any expression after extends
+
+    Overriding a method: Classes provide "super" keyword for that-
+        super.method(...) call a parent method
+        super(...) call a parent constructor inside our constructor only
+      See Example 2
+    Note: Arrow functions have no super, if accessed, it's taken form the outer
+          function.
+      See Example 3
+    Note: When the parent constructor is called in the derived class, it uses the
+          overridden method.
+    
+    Overriding constructor: With constructors it gets a little bit tricky. If a class extends
+    another class and has no constructors, then the following "empty" constructor is 
+    generated:
+        constructor(...args){
+          super(...args);
+        }
+    It basically calls the parent consturctor passing it all the arguments. That happens if we don't 
+    write a constructor of our own but be careful Constructors in inheriting classes must call super(...),
+    and do not do it before using this. Because in JS, there's a distinction between a constructor
+    function of an inheriting class i.e. so-called "derived constructor" and other functions. A 
+    derived constructor has a special internal property
+        [[ConstructorKind]]:"derived"
+    That's a special internal label and this label affects its behavior with "new"
+        * When a regular function is executed with "new", it creates an empty object and assigns to to "this"
+        * But when a derived cosntructor runs, it doesn't do this. It expects the parent constructor to do this job
+    So a derived constructor must call "super" in order to execute its parent constructor, otherwise the
+    object for "this" won't be created. And we'll get an error.
+
+    Overriding class fields: We can override not only methods, but also class fields. Although,
+    there's a tricky behavior when we access an overridden field in parent constructor, quite 
+    different from most other programming languages.
+        See Example 4
+        
+
 
 
 
 */
 
-// 1. Example 1
+// 1
 {
-  console.log("Hello");
-  [1, 2].forEach(console.log);
+  // Example 1
+  {
+    console.log("Hello");
+    [1, 2].forEach(console.log);
 
-  // BUT if we remove a semicolon
-  console.log("Hello"); // Remove ; to see error
-  [(1, 2)].forEach(console.log);
-  // This will get an error because JS does not
-  // assume a semicolon before square brackets.
-  // So, the code in the last example is treated
-  // as a single statement.
-  // JS will see it like this
-  // console.log("Hello")[1,2].forEach(console.log);
+    // BUT if we remove a semicolon
+    console.log("Hello"); // Remove ; to see error
+    [(1, 2)].forEach(console.log);
+    // This will get an error because JS does not
+    // assume a semicolon before square brackets.
+    // So, the code in the last example is treated
+    // as a single statement.
+    // JS will see it like this
+    // console.log("Hello")[1,2].forEach(console.log);
+  }
 }
 
-// 11. Example 1
+// 11
 {
-  const obj11 = { test: undefined };
-  console.log(obj11.test);
-  console.log("test" in obj11);
+  // Example 1
+  {
+    const obj11 = { test: undefined };
+    console.log(obj11.test);
+    console.log("test" in obj11);
+  }
 }
 
-// 12. Example 1
+// 12
 {
-  const obj12_1 = {
-    1: "A",
-    3: "A",
-    2: "A",
-    5: "A",
-    4: "A",
-    Name: "Ishan",
-    Age: 21,
-    Gender: "Male",
-  };
-
-  const obj12_2 = {
-    "+1": "A",
-    "+3": "A",
-    "+2": "A",
-    "+5": "A",
-    "+4": "A",
-    Name: "Ishan",
-    Age: 21,
-    Gender: "Male",
-  };
-
-  console.log(obj12_1);
-  console.log(obj12_2);
-}
-
-// 13. Example 1
-{
-  const var13_1 = Symbol("sym");
-  const var13_2 = Symbol("sym");
-  console.log(var13_1 === var13_2);
-  console.log(var13_1.description === var13_2.description);
-}
-
-// 14. Example 1
-{
-  const obj14_1 = {
-    name: "A",
-  };
-
-  // ... Inside Script 1
-  obj14_1.id = 10;
-
-  // ... Inside Script 2
-  obj14_1.id = 20; // OOH NO 'id' will be overwritten here
-}
-
-// 14. Example 2
-{
-  const sy12_1 = Symbol("id");
-  const sy12_2 = Symbol("id");
-
-  const obj14_2 = {
-    name: "B",
-    [sy12_1]: 10,
-  };
-
-  obj14_2[sy12_2] = 20;
-
-  console.log(obj14_2);
-}
-
-// 15. Example 1
-{
-  const id15_1 = Symbol("id");
-  const obj15_1 = {
-    name: "John",
-    age: 30,
-    [id15_1]: 123,
-  };
-
-  for (let key in obj15_1) console.log(key); // name, age (no symbols)
-
-  // the direct access by the symbol works
-  console.log("Direct: " + obj15_1[id15_1]); // Direct: 123
-}
-
-// 16. Example 1
-{
-  const id16_1 = Symbol.for("id");
-
-  const id16_2 = Symbol.for("id");
-
-  console.log(id16_1 === id16_2);
-
-  const ghs = {
-    cache: 1,
-  };
-
-  console.log(ghs);
-}
-
-// 18. Example 1
-{
-  const obj18_1 = {
-    sayHi() {
-      // ignored
-      console.log("Hello");
-    },
-    [Symbol("id")]: 123, // ignored
-    something: undefined, // ignored
-  };
-
-  console.log(JSON.stringify(obj18_1)); // {} (empty object)
-}
-
-// 18. Example 2
-{
-  const obj18_2 = {};
-  const obj18_3 = {};
-  obj18_2.test = obj18_3;
-  obj18_3.test = obj18_2;
-
-  console.log(JSON.stringify(obj18_3)); // TypeError: Converting circular structure to JSON
-}
-
-// 21. Example 1
-{
-  const func21_1 = (a) => {
-    const cache = {};
-    return (a) => {
-      if (cache[a]) {
-        return cache[a];
-      }
-      cache[a] = a;
-      console.log(a);
-      return a;
+  // Example 1
+  {
+    const obj12_1 = {
+      1: "A",
+      3: "A",
+      2: "A",
+      5: "A",
+      4: "A",
+      Name: "Ishan",
+      Age: 21,
+      Gender: "Male",
     };
-  };
-  const func21_2 = func21_1();
-  func21_2(1);
-  func21_2(2);
-  func21_2(1);
-  func21_2(2);
+
+    const obj12_2 = {
+      "+1": "A",
+      "+3": "A",
+      "+2": "A",
+      "+5": "A",
+      "+4": "A",
+      Name: "Ishan",
+      Age: 21,
+      Gender: "Male",
+    };
+
+    console.log(obj12_1);
+    console.log(obj12_2);
+  }
 }
 
-// 26. Example 1
+// 13
 {
-  const obj26_1 = {
-    eats: true,
-  };
-  const obj26_2 = {
-    jumps: true,
-  };
-  obj26_2.__proto__ = obj26_1;
-  console.log(obj26_2.jumps);
-  console.log(obj26_2.eats);
+  // Example 1
+  {
+    const var13_1 = Symbol("sym");
+    const var13_2 = Symbol("sym");
+    console.log(var13_1 === var13_2);
+    console.log(var13_1.description === var13_2.description);
+  }
 }
 
-// 26. Example 2
+// 14
 {
-  const animal = {
-    eats: true,
-    walk() {
-      console.log("Animal Walks");
-    },
-  };
-  const rabit = {
-    __proto__: animal,
-  };
-  rabit.walk = function () {
-    console.log("Rabit Walks");
-  };
-  rabit.walk();
-}
+  // Example 1
+  {
+    const obj14_1 = {
+      name: "A",
+    };
 
-// 26. Example 3
-{
-  const user = {
-    name: "Ishan",
-    surname: "Shukla",
-    set fullname(value) {
-      [this.name, this.surname] = value.split(" ");
-    },
-    get fullname() {
-      return `${this.name} ${this.surname}`;
-    },
-  };
+    // ... Inside Script 1
+    obj14_1.id = 10;
 
-  const admin = {
-    __proto__: user,
-    isAdmin: true,
-  };
-
-  console.log(user.fullname);
-  console.log(admin.fullname);
-
-  admin.fullname = "Sunil Shukla";
-
-  console.log(user.fullname);
-  console.log(admin.fullname);
-
-  user.fullname = "Ishmit Shukla";
-
-  console.log(user.fullname);
-  console.log(admin.fullname);
-}
-
-// 26. Example 4
-{
-  const animal = {
-    sleep() {
-      this.isSleeping = true;
-    },
-  };
-  const rabbit = {
-    __proto__: animal,
-  };
-  rabbit.sleep();
-  console.log(rabbit.isSleeping);
-  console.log(animal.isSleeping);
-}
-
-// 26. Example 5
-{
-  const animal = {
-    eats: true,
-  };
-  const rabbit = {
-    jumps: true,
-    __proto__: animal,
-  };
-  for (const prop in rabbit) {
-    const isOwn = rabbit.hasOwnProperty(prop);
-    if (isOwn) {
-      console.log("own", prop);
-    } else {
-      console.log("inherited", prop);
-    }
+    // ... Inside Script 2
+    obj14_1.id = 20; // OOH NO 'id' will be overwritten here
   }
 
-  // Pay attention here. Where is the method rabbit.hasOwnProperty coming from?
-  // We did not define it.
-  // Here we hace the following inheritance chain:
-  // rabbit -> animal -> Object.prototype
-  // Looking at the chain we can see that the method is provided by Object.prototype.hasOwnProperty
-  // In other words it is inherited. Then why it did not appear in the for...in loop.
-  // The answer is simple it's not enumerable. Just like all other properties of Object.prototype,
-  // it has enumerable: false flag. And for...in only lists enumerable properties.
+  // Example 2
+  {
+    const sy12_1 = Symbol("id");
+    const sy12_2 = Symbol("id");
+
+    const obj14_2 = {
+      name: "B",
+      [sy12_1]: 10,
+    };
+
+    obj14_2[sy12_2] = 20;
+
+    console.log(obj14_2);
+  }
 }
 
-// 27. Example 1
+// 15
 {
-  const obj = {};
-  const arr = [];
-  console.log(obj.__proto__ === Object.prototype);
-  console.log(obj.toString === obj.__proto__.toString);
-  console.log(obj.toString === Object.prototype.toString);
-  console.log(Object.prototype.__proto__);
-  console.log(arr.__proto__ === Array.prototype);
-  console.log(arr.__proto__.__proto__ === Object.prototype);
-  console.log(arr.__proto__.__proto__.__proto__);
+  // Example 1
+  {
+    const id15_1 = Symbol("id");
+    const obj15_1 = {
+      name: "John",
+      age: 30,
+      [id15_1]: 123,
+    };
+
+    for (let key in obj15_1) console.log(key); // name, age (no symbols)
+
+    // the direct access by the symbol works
+    console.log("Direct: " + obj15_1[id15_1]); // Direct: 123
+  }
+}
+
+// 16
+{
+  // Example 1
+  {
+    const id16_1 = Symbol.for("id");
+
+    const id16_2 = Symbol.for("id");
+
+    console.log(id16_1 === id16_2);
+
+    const ghs = {
+      cache: 1,
+    };
+
+    console.log(ghs);
+  }
+}
+
+// 18
+{
+  // Example 1
+  {
+    const obj18_1 = {
+      sayHi() {
+        // ignored
+        console.log("Hello");
+      },
+      [Symbol("id")]: 123, // ignored
+      something: undefined, // ignored
+    };
+
+    console.log(JSON.stringify(obj18_1)); // {} (empty object)
+  }
+
+  // Example 2
+  {
+    const obj18_2 = {};
+    const obj18_3 = {};
+    obj18_2.test = obj18_3;
+    obj18_3.test = obj18_2;
+
+    console.log(JSON.stringify(obj18_3)); // TypeError: Converting circular structure to JSON
+  }
+}
+
+// 21
+{
+  // Example 1
+  {
+    const func21_1 = (a) => {
+      const cache = {};
+      return (a) => {
+        if (cache[a]) {
+          return cache[a];
+        }
+        cache[a] = a;
+        console.log(a);
+        return a;
+      };
+    };
+    const func21_2 = func21_1();
+    func21_2(1);
+    func21_2(2);
+    func21_2(1);
+    func21_2(2);
+  }
+}
+
+// 26
+{
+  // Example 1
+  {
+    const obj26_1 = {
+      eats: true,
+    };
+    const obj26_2 = {
+      jumps: true,
+    };
+    obj26_2.__proto__ = obj26_1;
+    console.log(obj26_2.jumps);
+    console.log(obj26_2.eats);
+  }
+
+  // Example 2
+  {
+    const animal = {
+      eats: true,
+      walk() {
+        console.log("Animal Walks");
+      },
+    };
+    const rabit = {
+      __proto__: animal,
+    };
+    rabit.walk = function () {
+      console.log("Rabit Walks");
+    };
+    rabit.walk();
+  }
+
+  // Example 3
+  {
+    const user = {
+      name: "Ishan",
+      surname: "Shukla",
+      set fullname(value) {
+        [this.name, this.surname] = value.split(" ");
+      },
+      get fullname() {
+        return `${this.name} ${this.surname}`;
+      },
+    };
+
+    const admin = {
+      __proto__: user,
+      isAdmin: true,
+    };
+
+    console.log(user.fullname);
+    console.log(admin.fullname);
+
+    admin.fullname = "Sunil Shukla";
+
+    console.log(user.fullname);
+    console.log(admin.fullname);
+
+    user.fullname = "Ishmit Shukla";
+
+    console.log(user.fullname);
+    console.log(admin.fullname);
+  }
+
+  // Example 4
+  {
+    const animal = {
+      sleep() {
+        this.isSleeping = true;
+      },
+    };
+    const rabbit = {
+      __proto__: animal,
+    };
+    rabbit.sleep();
+    console.log(rabbit.isSleeping);
+    console.log(animal.isSleeping);
+  }
+
+  // Example 5
+  {
+    const animal = {
+      eats: true,
+    };
+    const rabbit = {
+      jumps: true,
+      __proto__: animal,
+    };
+    for (const prop in rabbit) {
+      const isOwn = rabbit.hasOwnProperty(prop);
+      if (isOwn) {
+        console.log("own", prop);
+      } else {
+        console.log("inherited", prop);
+      }
+    }
+
+    // Pay attention here. Where is the method rabbit.hasOwnProperty coming from?
+    // We did not define it.
+    // Here we hace the following inheritance chain:
+    // rabbit -> animal -> Object.prototype
+    // Looking at the chain we can see that the method is provided by Object.prototype.hasOwnProperty
+    // In other words it is inherited. Then why it did not appear in the for...in loop.
+    // The answer is simple it's not enumerable. Just like all other properties of Object.prototype,
+    // it has enumerable: false flag. And for...in only lists enumerable properties.
+  }
+}
+
+// 27
+{
+  // Example 1
+  {
+    const obj = {};
+    const arr = [];
+    console.log(obj.__proto__ === Object.prototype);
+    console.log(obj.toString === obj.__proto__.toString);
+    console.log(obj.toString === Object.prototype.toString);
+    console.log(Object.prototype.__proto__);
+    console.log(arr.__proto__ === Array.prototype);
+    console.log(arr.__proto__.__proto__ === Object.prototype);
+    console.log(arr.__proto__.__proto__.__proto__);
+  }
+}
+
+// 30
+{
+  // Example 1
+  {
+    const animal = {
+      eats: true,
+    };
+    const rabbit = Object.create(animal, {
+      jumps: {
+        value: true,
+      },
+    });
+    console.log(rabbit.eats);
+    console.log(Object.getPrototypeOf(rabbit) === animal);
+    console.log(Object.setPrototypeOf(rabbit, {}));
+    console.log(Object.getPrototypeOf(rabbit));
+  }
+}
+
+// 32
+{
+  // Example 1
+  {
+    class User {
+      constructor(name) {
+        this.name = name;
+      }
+      sayHi() {
+        console.log(this.name);
+      }
+    }
+    console.log(typeof User);
+    console.log(User === User.prototype.constructor);
+    console.log(User.prototype.sayHi);
+    console.log(Object.getOwnPropertyNames(User.prototype));
+    console.log(Object.getOwnPropertyNames(User));
+  }
+
+  // Example 2
+  {
+    class User {
+      ["say" + "Hi"]() {
+        console.log("Hello");
+      }
+    }
+    new User().sayHi();
+  }
+
+  // Example 3
+  {
+    class User {
+      name = "John"; // class field
+      sayHi() {
+        console.log(`Hello ${this.name}`);
+      }
+    }
+    new User().sayHi(); // Hello John
+  }
+
+  // Example 4
+  {
+    class User {
+      name = "John";
+    }
+
+    let user = new User();
+    console.log(user.name); // John
+    console.log(User.prototype.name); // undefined
+  }
+}
+
+// 33
+{
+  // Example 1
+  {
+    class Animal {
+      constructor(name) {
+        this.speed = 0;
+        this.name = name;
+      }
+      run(speed) {
+        this.speed = speed;
+        console.log(`${this.name} runs with speed ${this.speed}.`);
+      }
+      stop() {
+        this.speed = 0;
+        console.log(`${this.name} stands still.`);
+      }
+    }
+    class Rabbit extends Animal {
+      hide() {
+        console.log(`${this.name} hides!`);
+      }
+    }
+
+    let rabbit = new Rabbit("White Rabbit");
+
+    rabbit.run(5); // White Rabbit runs with speed 5.
+    rabbit.hide(); // White Rabbit hides!
+  }
+
+  // Example 2
+  {
+    class Animal {
+      constructor(name) {
+        this.speed = 0;
+        this.name = name;
+      }
+
+      run(speed) {
+        this.speed = speed;
+        console.log(`${this.name} runs with speed ${this.speed}`);
+      }
+
+      stop() {
+        this.speed = 0;
+        console.log(`${this.name} stands still`);
+      }
+    }
+    class Rabbit extends Animal {
+      hide() {
+        console.log(`${this.name} hides!`);
+      }
+      stop() {
+        super.stop();
+        this.hide();
+      }
+    }
+
+    const rabbit = new Rabbit("White Rabbit");
+    rabbit.run(5);
+    rabbit.stop();
+  }
+
+  // Example 3
+  {
+    class Animal {
+      constructor(name) {
+        this.speed = 0;
+        this.name = name;
+      }
+
+      run(speed) {
+        this.speed = speed;
+        console.log(`${this.name} runs with speed ${this.speed}`);
+      }
+
+      stop() {
+        this.speed = 0;
+        console.log(`${this.name} stands still`);
+      }
+    }
+    class Rabbit extends Animal {
+      hide() {
+        console.log(`${this.name} hides!`);
+      }
+      stop() {
+        // 1
+        setTimeout(() => {
+          super.stop();
+          this.hide();
+        }, 1000);
+
+        // 2
+        /*
+      setTimeout(function () {
+        super.stop(); // SyntaxError: 'super' keyword unexpected here
+        this.hide(); // TypeError: this.hide is not a function
+      }, 1000);
+      */
+      }
+    }
+
+    const rabbit = new Rabbit("White Rabbit");
+    rabbit.run(5);
+    rabbit.stop();
+  }
+
+  // Example 4
+  {
+    class Animal {
+      name = "Animal";
+      constructor() {
+        console.log(this.name);
+        this.show();
+      }
+      show() {
+        console.log(`Showing Animal`);
+      }
+    }
+    class Rabbit extends Animal {
+      name = "Rabbit";
+      show() {
+        console.log(`Showing Rabbit`);
+      }
+    }
+    new Animal(); 
+    new Rabbit(); 
+
+    /*
+    Here, class Rabbit extends Animal and overrides the name field with its own value
+    There's no own constructor in Rabbit, so Animal constructor is called. What's
+    interesting is that in both cases: new Animal() and new Rabbit() "Animal" is
+    logged.
+
+    In other words, the parent constructor always uses its own field value , not the
+    overridden one.
+    */
+  }
 }
