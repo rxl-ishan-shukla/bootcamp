@@ -512,10 +512,14 @@
     object for "this" won't be created. And we'll get an error.
 
     Overriding class fields: We can override not only methods, but also class fields. Although,
-    there's a tricky behavior when we access an overridden field in parent constructor, quite 
-    different from most other programming languages.
+    there's a tricky behavior when we access an overridden field in parent constructor.
         See Example 4
-        
+    When the parent constructor is called in the derived class, it uses the overridden method.
+    But for class fields it's not so. As said, the parent constructor always uses the parent field.
+    Well, the reason is the field initialization order. The class field is initialized:
+      * Before constructor for the base class (that doesn't extend anything).
+      * Immediately after "super()" for the derived class. 
+       
 
 
 
